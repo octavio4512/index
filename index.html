@@ -1,0 +1,940 @@
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PymeSmart - Sistema de Control y Automatización</title>
+    <!-- Tailwind CSS para el diseño visual limpio -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.04), 0 4px 12px -4px rgba(0, 0, 0, 0.04);
+        }
+        /* Personalización de la barra de desplazamiento */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+    <!-- Contenedor flotante para notificaciones Toast -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3 pointer-events-none max-w-sm w-full"></div>
+
+    <!-- Cabecera de la Aplicación -->
+    <header class="bg-slate-900 text-white shadow-xl sticky top-0 z-40 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col lg:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <span class="text-4xl animate-bounce duration-1000">🚀</span>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 to-emerald-400 bg-clip-text text-transparent">PymeSmart</h1>
+                        <span class="bg-indigo-500/20 text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase border border-indigo-500/30">v2.5 Stable</span>
+                    </div>
+                    <p class="text-xs text-slate-400" id="txt-subtitle">Automatización Inteligente de Negocios</p>
+                </div>
+            </div>
+            
+            <!-- Configuraciones Globales de Interfaz -->
+            <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-center lg:justify-end">
+                
+                <!-- Botón de Tutorial -->
+                <button id="btn-tutorial" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-3 py-2 rounded-lg border border-slate-700 transition-colors">
+                    <span>💡</span> <span id="btn-tutorial-toggle">Guía Rápida</span>
+                </button>
+
+                <!-- Inyector de Datos Demo -->
+                <button id="btn-demo-action" class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors shadow-md shadow-indigo-600/10">
+                    <span>⚡</span> <span id="btn-demo">Cargar Demo</span>
+                </button>
+
+                <!-- Restablecer Todo -->
+                <button id="btn-reset-action" class="flex items-center gap-1.5 bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-slate-400 text-xs font-semibold px-2.5 py-2 rounded-lg transition-colors border border-slate-700">
+                    <span>🔄</span>
+                </button>
+
+                <!-- Selector de Idioma -->
+                <div class="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-xs">
+                    <span class="text-slate-400" id="lbl-language">Idioma:</span>
+                    <select id="select-lang" class="bg-transparent text-white font-bold focus:outline-none cursor-pointer">
+                        <option value="es" class="bg-slate-900">Español</option>
+                        <option value="en" class="bg-slate-900">English</option>
+                        <option value="de" class="bg-slate-900">Deutsch</option>
+                    </select>
+                </div>
+
+                <!-- Selector de Moneda -->
+                <div class="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 text-xs">
+                    <span class="text-slate-400" id="lbl-currency">Moneda:</span>
+                    <select id="select-currency" class="bg-transparent text-white font-bold focus:outline-none cursor-pointer">
+                        <option value="PEN" class="bg-slate-900">Soles (S/)</option>
+                        <option value="USD" class="bg-slate-900">Dólares ($)</option>
+                        <option value="EUR" class="bg-slate-900">Euros (€)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Barra Tutorial Desplegable -->
+    <div id="tutorial-bar" class="bg-indigo-50 border-b border-indigo-100 overflow-hidden transition-all duration-300" style="max-height: 0px;">
+        <div class="max-w-7xl mx-auto px-6 py-6">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-base font-bold text-indigo-950 flex items-center gap-2">
+                    🎓 <span id="tut-title">Guía de Uso Rápido: ¡Aprende a usar PymeSmart!</span>
+                </h3>
+                <button id="btn-close-tutorial" class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                <div class="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm">
+                    <div class="font-bold text-indigo-600 mb-1" id="tut-step1-title">1. Configura tus Preferencias</div>
+                    <p class="text-slate-600 leading-relaxed" id="tut-step1-desc">Elige tu moneda (Soles, Dólares o Euros) e idioma preferido arriba en la barra de ajustes.</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm">
+                    <div class="font-bold text-indigo-600 mb-1" id="tut-step2-title">2. Registra Movimientos</div>
+                    <p class="text-slate-600 leading-relaxed" id="tut-step2-desc">Ingresa compras de inventario (abastecimiento) o ventas de productos en los formularios.</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm">
+                    <div class="font-bold text-indigo-600 mb-1" id="tut-step3-title">3. Revisa los Gráficos</div>
+                    <p class="text-slate-600 leading-relaxed" id="tut-step3-desc">Visualiza cómo rinde tu negocio mediante el balance financiero y las barras proporcionales en vivo.</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm">
+                    <div class="font-bold text-indigo-600 mb-1" id="tut-step4-title">4. Filtra y Exporta</div>
+                    <p class="text-slate-600 leading-relaxed" id="tut-step4-desc">Utiliza el buscador de transacciones o el filtro de flujo para auditar. Exporta a Excel (.CSV) con un clic.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Principal -->
+    <main class="max-w-7xl mx-auto px-6 py-8 w-full flex-grow">
+        
+        <!-- Tarjetas de Balance Anual -->
+        <section class="mb-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2" id="txt-section-balance">
+                    📊 Resumen de Rentabilidad Anual (Últimos 2 Años)
+                </h2>
+                <span class="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full font-medium" id="txt-realtime-badge">Cálculos automáticos en tiempo real</span>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Año 2025 -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between gap-4 glass-card">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider" id="lbl-balance-2025">Balance Anual 2025</span>
+                            <h3 class="text-4xl font-extrabold text-slate-900 mt-1" id="ganancia2025">S/ 0.00</h3>
+                        </div>
+                        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xl font-bold" id="icono2025">📈</div>
+                    </div>
+                    
+                    <!-- Barra de progreso visual comparativo (Ventas vs Compras) -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[11px] text-slate-400">
+                            <span>Compras vs Ventas Ratio</span>
+                            <span id="ratio-text-2025">50% / 50%</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden flex">
+                            <div id="bar-compras-2025" class="bg-amber-400 h-full transition-all duration-500" style="width: 50%"></div>
+                            <div id="bar-ventas-2025" class="bg-emerald-500 h-full transition-all duration-500" style="width: 50%"></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100 text-xs text-slate-500">
+                        <div>
+                            <span id="lbl-ventas-25">Ventas</span>: <strong class="text-emerald-600 block text-sm font-semibold mt-0.5" id="totalVentas2025">S/ 0.00</strong>
+                        </div>
+                        <div>
+                            <span id="lbl-compras-25">Compras</span>: <strong class="text-rose-600 block text-sm font-semibold mt-0.5" id="totalCompras2025">S/ 0.00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Año 2026 -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between gap-4 glass-card">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider" id="lbl-balance-2026">Balance Anual 2026</span>
+                            <h3 class="text-4xl font-extrabold text-slate-900 mt-1" id="ganancia2026">S/ 0.00</h3>
+                        </div>
+                        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xl font-bold" id="icono2026">📈</div>
+                    </div>
+
+                    <!-- Barra de progreso visual comparativo -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[11px] text-slate-400">
+                            <span>Compras vs Ventas Ratio</span>
+                            <span id="ratio-text-2026">50% / 50%</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden flex">
+                            <div id="bar-compras-2026" class="bg-amber-400 h-full transition-all duration-500" style="width: 50%"></div>
+                            <div id="bar-ventas-2026" class="bg-emerald-500 h-full transition-all duration-500" style="width: 50%"></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100 text-xs text-slate-500">
+                        <div>
+                            <span id="lbl-ventas-26">Ventas</span>: <strong class="text-emerald-600 block text-sm font-semibold mt-0.5" id="totalVentas2026">S/ 0.00</strong>
+                        </div>
+                        <div>
+                            <span id="lbl-compras-26">Compras</span>: <strong class="text-rose-600 block text-sm font-semibold mt-0.5" id="totalCompras2026">S/ 0.00</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Formularios de Operaciones -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Compras -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between glass-card">
+                <div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="p-2 bg-amber-50 text-amber-600 rounded-xl text-lg font-bold">📥</span>
+                        <h3 class="text-lg font-bold text-slate-800" id="title-compra">Registrar Compra</h3>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-4" id="desc-compra">Añade stock o registra la adquisición de mercadería para tu inventario.</p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1" id="lbl-pcompra">Nombre del Producto</label>
+                            <input type="text" id="compraNombre" placeholder="Ej. Laptops, Teclados" class="w-full px-3.5 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1" id="lbl-ccompra">Costo Unitario</label>
+                                <input type="number" id="compraPrecio" step="0.01" placeholder="0.00" class="w-full px-3.5 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1" id="lbl-cantcompra">Cantidad</label>
+                                <input type="number" id="compraCantidad" min="1" value="1" class="w-full px-3.5 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1" id="lbl-anocompra">Año Fiscal</label>
+                            <select id="compraAno" class="w-full px-3.5 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-sm bg-white">
+                                <option value="2025">2025</option>
+                                <option value="2026" selected>2026</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <button id="btn-submit-compra-el" class="w-full mt-6 bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-lg text-sm transition-all shadow-md shadow-amber-500/10">
+                    <span id="btn-submit-compra">Procesar Compra</span>
+                </button>
+            </div>
+
+            <!-- Ventas -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between glass-card">
+                <div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="p-2 bg-emerald-50 text-emerald-600 rounded-xl text-lg font-bold">📤</span>
+                        <h3 class="text-lg font-bold text-slate-800" id="title-venta">Automatizar Venta</h3>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-4" id="desc-venta">Registra la venta automatizada de un producto para actualizar la caja.</p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1" id="lbl-pventa">Nombre del Producto</label>
+                            <input type="text" id="ventaNombre" placeholder="Ej. Laptop Asus" class="w-full px-3.5 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1" id="lbl-cventa">Precio de Venta</label>
+                                <input type="number" id="ventaPrecio" step="0.01" placeholder="0.00" class="w-full px-3.5 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1" id="lbl-cantventa">Cantidad</label>
+                                <input type="number" id="ventaCantidad" min="1" value="1" class="w-full px-3.5 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1" id="lbl-anoventa">Año Fiscal</label>
+                            <select id="ventaAno" class="w-full px-3.5 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm bg-white">
+                                <option value="2025">2025</option>
+                                <option value="2026" selected>2026</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <button id="btn-submit-venta-el" class="w-full mt-6 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2.5 rounded-lg text-sm transition-all shadow-md shadow-emerald-500/10">
+                    <span id="btn-submit-venta">Procesar Venta</span>
+                </button>
+            </div>
+
+            <!-- Historial -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between glass-card">
+                <div class="h-full flex flex-col text-slate-800">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="p-2 bg-indigo-50 text-indigo-600 rounded-xl text-lg font-bold">📜</span>
+                            <h3 class="text-lg font-bold text-slate-800" id="title-history">Historial de Operaciones</h3>
+                        </div>
+                        <span id="logCount" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold">0</span>
+                    </div>
+                    
+                    <!-- Filtros e Input -->
+                    <div class="space-y-2 mb-3">
+                        <input type="text" id="search-input" placeholder="Buscar producto..." class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                        <div class="flex gap-1.5 text-[10px]">
+                            <button id="filter-all" class="bg-indigo-600 text-white font-bold px-2.5 py-1 rounded-md transition-all">Todos</button>
+                            <button id="filter-ventas" class="bg-slate-100 text-slate-600 font-bold px-2.5 py-1 rounded-md hover:bg-slate-200 transition-all">Ventas</button>
+                            <button id="filter-compras" class="bg-slate-100 text-slate-600 font-bold px-2.5 py-1 rounded-md hover:bg-slate-200 transition-all">Compras</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Caja de Logs -->
+                    <div class="flex-grow overflow-y-auto max-h-[170px] space-y-2 pr-1" id="logContainer">
+                        <!-- Creado Dinámicamente -->
+                    </div>
+
+                    <!-- Descarga CSV -->
+                    <button id="btn-export-action" class="w-full mt-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs transition-all flex items-center justify-center gap-2">
+                        <span>📥</span> <span id="btn-export-csv">Exportar a CSV (Excel)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer de Integrantes -->
+    <footer class="bg-slate-900 text-slate-400 border-t border-slate-800 py-8 px-6 mt-12">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-center gap-6">
+            <div class="text-center lg:text-left">
+                <p class="text-sm font-semibold text-slate-300">PymeSmart © 2026</p>
+                <p class="text-xs mt-1 text-slate-500" id="footer-system-desc">Plataforma de Control Financiero Comercial Automatizado</p>
+            </div>
+            
+            <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 max-w-lg w-full lg:w-auto">
+                <p class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 text-center lg:text-left" id="footer-team-title">Equipo de Desarrollo</p>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px]">
+                    <div class="bg-slate-800/80 px-3 py-1.5 rounded border border-slate-700/45">
+                        👨‍💻 Rivera Meza Jose Octavio
+                    </div>
+                    <div class="bg-slate-800/80 px-3 py-1.5 rounded border border-slate-700/45">
+                        👨‍💻 López Manchego Jamir César
+                    </div>
+                    <div class="bg-slate-800/80 px-3 py-1.5 rounded border border-slate-700/45">
+                        👨‍💻 Pantoja Zorrilla Leonel Alexander
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Script Robusto compatible con Clics e Interacciones en PC -->
+    <script>
+        // Diccionario Multilingüe
+        const dictionary = {
+            es: {
+                subtitle: "Automatización Inteligente de Negocios",
+                langLbl: "Idioma:",
+                currLbl: "Moneda:",
+                secBalance: "📊 Resumen de Rentabilidad Anual (Últimos 2 Años)",
+                bal2025: "Balance Anual 2025",
+                bal2026: "Balance Anual 2026",
+                ventas: "Ventas",
+                compras: "Compras",
+                tCompra: "Registrar Compra",
+                dCompra: "Añade stock o registra la adquisición de mercadería para tu inventario.",
+                lblProd: "Nombre del Producto",
+                lblUnit: "Costo Unitario",
+                lblCant: "Cantidad",
+                lblAno: "Año Fiscal",
+                btnCompra: "Procesar Compra",
+                tVenta: "Automatizar Venta",
+                dVenta: "Registrar la venta automatizada de un producto para actualizar la caja.",
+                lblPventa: "Precio de Venta",
+                btnVenta: "Procesar Venta",
+                tHistory: "Historial de Operaciones",
+                dHistory: "Lista detallada de compras y ventas ejecutadas en tiempo real.",
+                fDesc: "Plataforma de Control Financiero Comercial Automatizado",
+                fTeam: "Equipo de Desarrollo",
+                noTrans: "No hay transacciones registradas.",
+                pNameAlert: "Por favor, ingrese un nombre para el producto.",
+                pPriceAlert: "Por favor, ingrese un precio válido mayor a cero.",
+                pQtyAlert: "Por favor, ingrese una cantidad válida mayor a cero.",
+                btnExport: "Exportar a CSV (Excel)",
+                btnTutorial: "Guía Rápida",
+                btnDemo: "Cargar Demo",
+                searchPlaceholder: "Buscar producto...",
+                filterAll: "Todos",
+                notifySuccessCompra: "Compra agregada de: ",
+                notifySuccessVenta: "Venta registrada de: ",
+                notifyDemoLoaded: "¡Datos de demostración cargados!",
+                notifyReset: "Datos reestablecidos por defecto.",
+                tutTitle: "Guía de Uso Rápido: ¡Aprende a usar PymeSmart!",
+                tutStep1T: "1. Configura tus Preferencias",
+                tutStep1D: "Elige tu moneda (Soles, Dólares o Euros) e idioma preferido arriba en la barra de ajustes.",
+                tutStep2T: "2. Registra Movimientos",
+                tutStep2D: "Ingresa compras de inventario (abastecimiento) o ventas de productos en los formularios.",
+                tutStep3T: "3. Revisa los Gráficos",
+                tutStep3D: "Visualiza cómo rinde tu negocio mediante el balance financiero y las barras proporcionales en vivo.",
+                tutStep4T: "4. Filtra y Exporta",
+                tutStep4D: "Utiliza el buscador de transacciones o el filtro de flujo para auditar. Exporta a Excel (.CSV) con un clic."
+            },
+            en: {
+                subtitle: "Smart Business Automation Solutions",
+                langLbl: "Language:",
+                currLbl: "Currency:",
+                secBalance: "📊 Annual Profitability Summary (Last 2 Years)",
+                bal2025: "Annual Balance 2025",
+                bal2026: "Annual Balance 2026",
+                ventas: "Sales",
+                compras: "Purchases",
+                tCompra: "Register Purchase",
+                dCompra: "Add stock or record the acquisition of merchandise for your inventory.",
+                lblProd: "Product Name",
+                lblUnit: "Unit Cost",
+                lblCant: "Quantity",
+                lblAno: "Fiscal Year",
+                btnCompra: "Process Purchase",
+                tVenta: "Automate Sale",
+                dVenta: "Record the automated sale of a product to update cash flow.",
+                lblPventa: "Sale Price",
+                btnVenta: "Process Sale",
+                tHistory: "Transaction History",
+                dHistory: "Detailed list of purchases and sales processed in real-time.",
+                fDesc: "Automated Commercial & Financial Control Platform",
+                fTeam: "Development Team",
+                noTrans: "No transactions recorded.",
+                pNameAlert: "Please enter a product name.",
+                pPriceAlert: "Please enter a valid price greater than zero.",
+                pQtyAlert: "Please enter a valid quantity greater than zero.",
+                btnExport: "Export to CSV (Excel)",
+                btnTutorial: "Quick Guide",
+                btnDemo: "Load Demo",
+                searchPlaceholder: "Search product...",
+                filterAll: "All",
+                notifySuccessCompra: "Purchase added for: ",
+                notifySuccessVenta: "Sale registered for: ",
+                notifyDemoLoaded: "Demo data successfully loaded!",
+                notifyReset: "System has been reset.",
+                tutTitle: "Quick Start Guide: Learn how to use PymeSmart!",
+                tutStep1T: "1. Configure Preferences",
+                tutStep1D: "Choose your currency (Soles, Dollars, or Euros) and preferred language on the settings bar above.",
+                tutStep2T: "2. Record Transactions",
+                tutStep2D: "Input inventory purchases (replenishment) or product sales directly inside the forms.",
+                tutStep3T: "3. Check Analytics",
+                tutStep3D: "Observe how your business performs through the financial balance and live proportional bar charts.",
+                tutStep4T: "4. Filter & Export",
+                tutStep4D: "Use the transaction search engine or filters to audit. Export cleanly to Excel (.CSV) in one click."
+            },
+            de: {
+                subtitle: "Intelligente Geschäftsautomatisierung",
+                langLbl: "Sprache:",
+                currLbl: "Währung:",
+                secBalance: "📊 Jährliche Rentabilitätsübersicht (Letzte 2 Jahre)",
+                bal2025: "Jahresbilanz 2025",
+                bal2026: "Jahresbilanz 2026",
+                ventas: "Verkäufe",
+                compras: "Einkäufe",
+                tCompra: "Einkauf Registrieren",
+                dCompra: "Fügen Sie Lagerbestand hinzu oder erfassen Sie den Einkauf von Waren.",
+                lblProd: "Produktname",
+                lblUnit: "Stückkosten",
+                lblCant: "Menge",
+                lblAno: "Geschäftsjahr",
+                btnCompra: "Einkauf Abwickeln",
+                tVenta: "Verkauf Automatisieren",
+                dVenta: "Erfassen Sie den automatisierten Verkauf eines Produkts zur Aktualisierung.",
+                lblPventa: "Verkaufspreis",
+                btnVenta: "Verkauf Abwickeln",
+                tHistory: "Transaktionsverlauf",
+                dHistory: "Detaillierte Liste der in Echtzeit verarbeiteten Käufe und Verkäufe.",
+                fDesc: "Automatisierte Plattform für kaufmännische und finanzielle Kontrolle",
+                fTeam: "Entwicklungsteam",
+                noTrans: "Keine Transaktionen aufgezeichnet.",
+                pNameAlert: "Bitte geben Sie einen Produktnamen ein.",
+                pPriceAlert: "Bitte geben Sie einen gültigen Preis größer als Null ein.",
+                pQtyAlert: "Bitte geben Sie eine gültige Menge größer als Null ein.",
+                btnExport: "In CSV exportieren",
+                btnTutorial: "Schnellanleitung",
+                btnDemo: "Demo laden",
+                searchPlaceholder: "Produkt suchen...",
+                filterAll: "Alle",
+                notifySuccessCompra: "Einkauf hinzugefügt für: ",
+                notifySuccessVenta: "Verkauf registriert für: ",
+                notifyDemoLoaded: "Demo-Daten geladen!",
+                notifyReset: "Daten zurückgesetzt.",
+                tutTitle: "Schnellstartanleitung: Lernen Sie PymeSmart kennen!",
+                tutStep1T: "1. Einstellungen anpassen",
+                tutStep1D: "Wählen Sie oben in den Einstellungen Ihre Währung (Soles, Dollar, Euro) und Ihre bevorzugte Sprache.",
+                tutStep2T: "2. Bewegungen eintragen",
+                tutStep2D: "Tragen Sie Lagereinkäufe (Nachbestellungen) oder Produktverkäufe in die entsprechenden Formulare ein.",
+                tutStep3T: "3. Grafiken prüfen",
+                tutStep3D: "Verfolgen Sie die Leistung Ihres Unternehmens live über die Finanzbilanz und Verhältmäßigkeitsbalken.",
+                tutStep4T: "4. Filtern & Exportieren",
+                tutStep4D: "Nutzen Sie die Suche oder Filter, um Einträge zu prüfen. Exportieren Sie mit einem Klick in Excel (.CSV)."
+            }
+        };
+
+        // Estado financiero base estándar (Soles PEN como base)
+        const estadoInicialPorDefecto = {
+            datos: {
+                2025: { ventas: 42000.00, compras: 18500.00 },
+                2026: { ventas: 15300.00, compras: 6200.00 }
+            },
+            transacciones: []
+        };
+
+        let datosFinancierosBase = JSON.parse(JSON.stringify(estadoInicialPorDefecto.datos));
+        let transacciones = [];
+        let idiomaActual = "es";
+        let monedaActual = "PEN";
+        let filtroFlujo = "all";
+
+        const tasasDeCambio = { PEN: 1.0, USD: 0.27, EUR: 0.25 };
+        const formatoMonedas = {
+            PEN: { style: 'currency', currency: 'PEN', locale: 'es-PE' },
+            USD: { style: 'currency', currency: 'USD', locale: 'en-US' },
+            EUR: { style: 'currency', currency: 'EUR', locale: 'de-DE' }
+        };
+
+        // Guardar estado actual en memoria LocalStorage para evitar pérdidas
+        function guardarEnLocalStorage() {
+            try {
+                localStorage.setItem('pymesmart_datos', JSON.stringify(datosFinancierosBase));
+                localStorage.setItem('pymesmart_transacciones', JSON.stringify(transacciones));
+            } catch(e) {
+                // Silenciar errores si el iframe bloquea localStorage
+            }
+        }
+
+        // Recuperar datos al cargar
+        function cargarDeLocalStorage() {
+            try {
+                const guardadosD = localStorage.getItem('pymesmart_datos');
+                const guardadosT = localStorage.getItem('pymesmart_transacciones');
+                if (guardadosD) datosFinancierosBase = JSON.parse(guardadosD);
+                if (guardadosT) transacciones = JSON.parse(guardadosT);
+            } catch(e) {
+                // Fallback a los datos por defecto si localStorage está deshabilitado
+            }
+        }
+
+        // Formatear monedas
+        function formatMoneda(montoEnSoles) {
+            let tasa = tasasDeCambio[monedaActual];
+            let montoConvertido = montoEnSoles * tasa;
+            let conf = formatoMonedas[monedaActual];
+            return montoConvertido.toLocaleString(conf.locale, {
+                style: 'currency',
+                currency: conf.currency,
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Mostrar notificaciones flotantes (Toasts) de manera elegante
+        function showNotification(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-slate-900 border-emerald-500/30 text-emerald-400';
+            let icon = '✅';
+            if (type === 'error') {
+                bgClass = 'bg-slate-900 border-rose-500/30 text-rose-400';
+                icon = '❌';
+            } else if (type === 'info') {
+                bgClass = 'bg-slate-900 border-indigo-500/30 text-indigo-400';
+                icon = '⚡';
+            }
+
+            toast.className = `flex items-center gap-3 p-4 rounded-xl border shadow-lg ${bgClass} transition-all duration-300 transform translate-x-12 opacity-0 pointer-events-auto text-xs font-semibold`;
+            toast.innerHTML = `<span>${icon}</span> <p class="flex-grow">${message}</p>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-x-12', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-x-12', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // Alternar visualización del tutorial rápido
+        function toggleTutorial() {
+            const bar = document.getElementById('tutorial-bar');
+            if (bar.style.maxHeight === '0px' || !bar.style.maxHeight) {
+                bar.style.maxHeight = '400px';
+            } else {
+                bar.style.maxHeight = '0px';
+            }
+        }
+
+        // Restablecer sistema a valores iniciales limpios
+        function restablecerSistema() {
+            const t = dictionary[idiomaActual];
+            datosFinancierosBase = JSON.parse(JSON.stringify(estadoInicialPorDefecto.datos));
+            transacciones = [];
+            guardarEnLocalStorage();
+            actualizarPantalla();
+            showNotification(t.notifyReset, 'info');
+        }
+
+        // Inyectar datos de prueba significativos
+        function cargarDatosDemo() {
+            const t = dictionary[idiomaActual];
+            
+            datosFinancierosBase = {
+                2025: { ventas: 125000.00, compras: 84000.00 },
+                2026: { ventas: 54000.00, compras: 21000.00 }
+            };
+
+            transacciones = [
+                { tipo: 'venta', producto: 'MacBook Pro M3', precioUnitario: 6500.00, cantidad: 2, total: 13000.00, ano: 2026 },
+                { tipo: 'compra', producto: 'Importación Pantallas OLED', precioUnitario: 9500.00, cantidad: 1, total: 9500.00, ano: 2026 },
+                { tipo: 'venta', producto: 'Licencias Empresariales ERP', precioUnitario: 450.00, cantidad: 12, total: 5400.00, ano: 2026 },
+                { tipo: 'compra', producto: 'Hardware Almacenamiento NAS', precioUnitario: 3200.00, cantidad: 1, total: 3200.00, ano: 2025 },
+                { tipo: 'venta', producto: 'Servicio Auditoría de Redes', precioUnitario: 15000.00, cantidad: 1, total: 15000.00, ano: 2025 }
+            ];
+
+            guardarEnLocalStorage();
+            showNotification(t.notifyDemoLoaded, 'info');
+            actualizarPantalla();
+        }
+
+        // Traducir interfaz
+        function cambiarIdioma() {
+            idiomaActual = document.getElementById('select-lang').value;
+            const t = dictionary[idiomaActual];
+
+            document.getElementById('txt-subtitle').innerText = t.subtitle;
+            document.getElementById('lbl-language').innerText = t.langLbl;
+            document.getElementById('lbl-currency').innerText = t.currLbl;
+            document.getElementById('txt-section-balance').innerText = t.secBalance;
+            document.getElementById('lbl-balance-2025').innerText = t.bal2025;
+            document.getElementById('lbl-balance-2026').innerText = t.bal2026;
+            
+            document.getElementById('lbl-ventas-25').innerText = t.ventas;
+            document.getElementById('lbl-compras-25').innerText = t.compras;
+            document.getElementById('lbl-ventas-26').innerText = t.ventas;
+            document.getElementById('lbl-compras-26').innerText = t.compras;
+
+            document.getElementById('title-compra').innerText = t.tCompra;
+            document.getElementById('desc-compra').innerText = t.dCompra;
+            document.getElementById('lbl-pcompra').innerText = t.lblProd;
+            document.getElementById('lbl-ccompra').innerText = t.lblUnit;
+            document.getElementById('lbl-cantcompra').innerText = t.lblCant;
+            document.getElementById('lbl-anocompra').innerText = t.lblAno;
+            document.getElementById('btn-submit-compra').innerText = t.btnCompra;
+
+            document.getElementById('title-venta').innerText = t.tVenta;
+            document.getElementById('desc-venta').innerText = t.dVenta;
+            document.getElementById('lbl-pventa').innerText = t.lblProd;
+            document.getElementById('lbl-cventa').innerText = t.lblPventa;
+            document.getElementById('lbl-cantventa').innerText = t.lblCant;
+            document.getElementById('lbl-anoventa').innerText = t.lblAno;
+            document.getElementById('btn-submit-venta').innerText = t.btnVenta;
+
+            document.getElementById('title-history').innerText = t.tHistory;
+            document.getElementById('footer-system-desc').innerText = t.fDesc;
+            document.getElementById('footer-team-title').innerText = t.fTeam;
+            document.getElementById('btn-export-csv').innerText = t.btnExport;
+            document.getElementById('btn-tutorial-toggle').innerText = t.btnTutorial;
+            document.getElementById('btn-demo').innerText = t.btnDemo;
+            document.getElementById('search-input').placeholder = t.searchPlaceholder;
+            document.getElementById('filter-all').innerText = t.filterAll;
+            document.getElementById('filter-ventas').innerText = t.ventas;
+            document.getElementById('filter-compras').innerText = t.compras;
+
+            // Tutorial
+            document.getElementById('tut-title').innerText = t.tutTitle;
+            document.getElementById('tut-step1-title').innerText = t.tutStep1T;
+            document.getElementById('tut-step1-desc').innerText = t.tutStep1D;
+            document.getElementById('tut-step2-title').innerText = t.tutStep2T;
+            document.getElementById('tut-step2-desc').innerText = t.tutStep2D;
+            document.getElementById('tut-step3-title').innerText = t.tutStep3T;
+            document.getElementById('tut-step3-desc').innerText = t.tutStep3D;
+            document.getElementById('tut-step4-title').innerText = t.tutStep4T;
+            document.getElementById('tut-step4-desc').innerText = t.tutStep4D;
+
+            actualizarPantalla();
+        }
+
+        function cambiarMoneda() {
+            monedaActual = document.getElementById('select-currency').value;
+            actualizarPantalla();
+        }
+
+        function setFiltro(tipo) {
+            filtroFlujo = tipo;
+            
+            const btnAll = document.getElementById('filter-all');
+            const btnVenta = document.getElementById('filter-ventas');
+            const btnCompra = document.getElementById('filter-compras');
+
+            btnAll.className = "text-slate-600 font-bold px-2.5 py-1 rounded-md hover:bg-slate-200 transition-all " + (tipo === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-100');
+            btnVenta.className = "text-slate-600 font-bold px-2.5 py-1 rounded-md hover:bg-slate-200 transition-all " + (tipo === 'venta' ? 'bg-indigo-600 text-white' : 'bg-slate-100');
+            btnCompra.className = "text-slate-600 font-bold px-2.5 py-1 rounded-md hover:bg-slate-200 transition-all " + (tipo === 'compra' ? 'bg-indigo-600 text-white' : 'bg-slate-100');
+
+            actualizarPantalla();
+        }
+
+        // Sincronizar y pintar todo el flujo contable y barras
+        function actualizarPantalla() {
+            const t = dictionary[idiomaActual];
+
+            [2025, 2026].forEach(ano => {
+                let totalVentas = datosFinancierosBase[ano].ventas;
+                let totalCompras = datosFinancierosBase[ano].compras;
+                let ganancia = totalVentas - totalCompras;
+
+                document.getElementById(`totalVentas${ano}`).innerText = formatMoneda(totalVentas);
+                document.getElementById(`totalCompras${ano}`).innerText = formatMoneda(totalCompras);
+                
+                let elementoGanancia = document.getElementById(`ganancia${ano}`);
+                let elementoIcono = document.getElementById(`icono${ano}`);
+                
+                elementoGanancia.innerText = formatMoneda(ganancia);
+
+                if (ganancia >= 0) {
+                    elementoGanancia.className = "text-4xl font-extrabold text-slate-900 mt-1";
+                    elementoIcono.innerText = "📈";
+                    elementoIcono.className = "p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xl font-bold";
+                } else {
+                    elementoGanancia.className = "text-4xl font-extrabold text-rose-600 mt-1";
+                    elementoIcono.innerText = "📉";
+                    elementoIcono.className = "p-3 bg-rose-50 text-rose-600 rounded-xl text-xl font-bold";
+                }
+
+                // Cálculo visual de las barras comparativas
+                let totalCombinado = totalVentas + totalCompras;
+                let barVentas = document.getElementById(`bar-ventas-${ano}`);
+                let barCompras = document.getElementById(`bar-compras-${ano}`);
+                let ratioText = document.getElementById(`ratio-text-${ano}`);
+
+                if (totalCombinado > 0) {
+                    let pctVentas = (totalVentas / totalCombinado) * 100;
+                    let pctCompras = (totalCompras / totalCombinado) * 100;
+                    
+                    barVentas.style.width = `${pctVentas}%`;
+                    barCompras.style.width = `${pctCompras}%`;
+                    ratioText.innerText = `${pctCompras.toFixed(0)}% / ${pctVentas.toFixed(0)}%`;
+                } else {
+                    barVentas.style.width = `50%`;
+                    barCompras.style.width = `50%`;
+                    ratioText.innerText = `50% / 50%`;
+                }
+            });
+
+            // Lógica de búsqueda y renderizado en el historial
+            let searchVal = document.getElementById('search-input').value.toLowerCase().trim();
+            let container = document.getElementById('logContainer');
+            let counter = document.getElementById('logCount');
+
+            let transaccionesFiltradas = transacciones.filter(tr => {
+                let matchesSearch = tr.producto.toLowerCase().includes(searchVal);
+                let matchesFilter = (filtroFlujo === 'all' || tr.tipo === filtroFlujo);
+                return matchesSearch && matchesFilter;
+            });
+
+            counter.innerText = transaccionesFiltradas.length;
+
+            if (transaccionesFiltradas.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 text-xs">
+                        ${t.noTrans}
+                    </div>
+                `;
+            } else {
+                container.innerHTML = transaccionesFiltradas.map(tr => {
+                    let esVenta = tr.tipo === 'venta';
+                    let badgeColor = esVenta ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-800 border-amber-200';
+                    let opSymbol = esVenta ? '+' : '-';
+                    let tipoLabel = esVenta ? t.ventas.substring(0, t.ventas.length - 1) : t.compras.substring(0, t.compras.length - 1);
+
+                    return `
+                        <div class="p-3 bg-slate-50/80 border border-slate-100 rounded-xl flex justify-between items-center text-xs hover:bg-slate-100/50 transition-colors">
+                            <div class="space-y-0.5">
+                                <div class="font-bold text-slate-700 flex items-center gap-1.5">
+                                    <span class="px-1.5 py-0.5 text-[9px] font-extrabold rounded border ${badgeColor} uppercase tracking-wide">
+                                        ${tipoLabel}
+                                    </span>
+                                    <span>${tr.producto}</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400">
+                                    ${tr.cantidad} u. x ${formatMoneda(tr.precioUnitario)} | ${t.lblAno}: ${tr.ano}
+                                </div>
+                            </div>
+                            <div class="font-bold ${esVenta ? 'text-emerald-600' : 'text-amber-600'}">
+                                ${opSymbol} ${formatMoneda(tr.total)}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Procesar transacciones (Normalizadas a Soles PEN)
+        function procesarOperacion(tipo) {
+            const t = dictionary[idiomaActual];
+
+            let nombreInput = document.getElementById(`${tipo}Nombre`);
+            let precioInput = document.getElementById(`${tipo}Precio`);
+            let cantidadInput = document.getElementById(`${tipo}Cantidad`);
+            let anoInput = document.getElementById(`${tipo}Ano`);
+
+            let nombre = nombreInput.value.trim();
+            let precioIngresado = parseFloat(precioInput.value);
+            let cantidad = parseInt(cantidadInput.value);
+            let ano = parseInt(anoInput.value);
+
+            if (!nombre) {
+                showNotification(t.pNameAlert, 'error');
+                return;
+            }
+            if (isNaN(precioIngresado) || precioIngresado <= 0) {
+                showNotification(t.pPriceAlert, 'error');
+                return;
+            }
+            if (isNaN(cantidad) || cantidad <= 0) {
+                showNotification(t.pQtyAlert, 'error');
+                return;
+            }
+
+            // Normalización monetaria para consistencia en la base de datos local
+            let tasaActual = tasasDeCambio[monedaActual];
+            let precioEnSoles = precioIngresado / tasaActual;
+            let totalEnSoles = precioEnSoles * cantidad;
+
+            if (tipo === 'venta') {
+                datosFinancierosBase[ano].ventas += totalEnSoles;
+                showNotification(`${t.notifySuccessVenta} ${nombre}`, 'success');
+            } else {
+                datosFinancierosBase[ano].compras += totalEnSoles;
+                showNotification(`${t.notifySuccessCompra} ${nombre}`, 'info');
+            }
+
+            // Guardar registro
+            transacciones.unshift({
+                tipo: tipo,
+                producto: nombre,
+                precioUnitario: precioEnSoles,
+                cantidad: cantidad,
+                total: totalEnSoles,
+                ano: ano
+            });
+
+            // Limpieza
+            nombreInput.value = "";
+            precioInput.value = "";
+            cantidadInput.value = "1";
+
+            guardarEnLocalStorage();
+            actualizarPantalla();
+        }
+
+        // Exportador robusto a CSV (Excel)
+        function exportarCSV() {
+            if (transacciones.length === 0) {
+                showNotification("No hay transacciones registradas para exportar.", "error");
+                return;
+            }
+
+            const headers = ["Tipo", "Producto", "Precio Unitario (Soles)", "Cantidad", "Total (Soles)", "Año Fiscal"];
+            const csvRows = [headers.join(",")];
+
+            transacciones.forEach(t => {
+                const values = [
+                    t.tipo.toUpperCase(),
+                    `"${t.producto.replace(/"/g, '""')}"`,
+                    t.precioUnitario.toFixed(2),
+                    t.cantidad,
+                    t.total.toFixed(2),
+                    t.ano
+                ];
+                csvRows.push(values.join(","));
+            });
+
+            const blob = new Blob([csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `pymesmart_reporte_${new Date().toISOString().slice(0,10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Configuración de escuchas de eventos robustos (Touch y Click simultáneos)
+        function agregarEventosHibridos(elementoId, callback) {
+            const el = document.getElementById(elementoId);
+            if (!el) return;
+            
+            // Previene doble ejecución si soporta clic y touch al mismo tiempo
+            let ejecutado = false;
+            const trigger = (e) => {
+                e.preventDefault();
+                if (ejecutado) return;
+                ejecutado = true;
+                callback();
+                setTimeout(() => { ejecutado = false; }, 200);
+            };
+
+            el.addEventListener('click', trigger);
+            el.addEventListener('touchstart', trigger, { passive: false });
+        }
+
+        // Inicialización y enlace de eventos robustos
+        window.onload = function() {
+            cargarDeLocalStorage();
+            
+            // Enlazar los botones para que respondan perfectamente en PC y móviles
+            agregarEventosHibridos('btn-tutorial', toggleTutorial);
+            agregarEventosHibridos('btn-close-tutorial', toggleTutorial);
+            agregarEventosHibridos('btn-demo-action', cargarDatosDemo);
+            agregarEventosHibridos('btn-reset-action', restablecerSistema);
+            agregarEventosHibridos('btn-submit-compra-el', () => procesarOperacion('compra'));
+            agregarEventosHibridos('btn-submit-venta-el', () => procesarOperacion('venta'));
+            agregarEventosHibridos('btn-export-action', exportarCSV);
+
+            // Enlazar botones de filtros sencillos
+            agregarEventosHibridos('filter-all', () => setFiltro('all'));
+            agregarEventosHibridos('filter-ventas', () => setFiltro('venta'));
+            agregarEventosHibridos('filter-compras', () => setFiltro('compra'));
+
+            // Escuchas nativas de inputs del navegador
+            document.getElementById('select-lang').addEventListener('change', cambiarIdioma);
+            document.getElementById('select-currency').addEventListener('change', cambiarMoneda);
+            document.getElementById('search-input').addEventListener('keyup', filtrarHistorial);
+
+            cambiarIdioma(); // Ejecutar mapeo inicial de textos
+        };
+    </script>
+</body>
+</html>
+
+```
